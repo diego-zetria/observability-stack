@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Observability - ALB Rule + Security Groups'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  AlbListenerArn:
+    Type: String
+    Description: ARN of the existing HTTPS listener on the ALB
+  AlbSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  BackendSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: SG of myapp-backend-dev for OTLP ingress
+  HostHeader:
+    Type: String
+    Default: monitoring.dev.example.com
+  ListenerRulePriority:
+    Type: Number
+    Default: 10
+
+Resources:
+  MonitoringSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Observability Stack
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          SourceSecurityGroupId: !Ref AlbSecurityGroupId
+          Description: Grafana from ALB
+        - IpProtocol: tcp
+          FromPort: 4317
+          ToPort: 4317
+          SourceSecurityGroupId: !Ref BackendSecurityGroupId
+          Description: OTLP gRPC from backend
+        - IpProtocol: tcp
+          FromPort: 4318
+          ToPort: 4318
+          SourceSecurityGroupId: !Ref BackendSecurityGroupId
+          Description: OTLP HTTP from backend
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound
+      Tags:
+        - Key: Name
+          Value: !Sub 'obs-monitoring-${Environment}'
+
+  GrafanaTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub 'monitoring-grafana-${Environment}'
+      Port: 3000
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      TargetType: ip
+      HealthCheckPath: /api/health
+      HealthCheckProtocol: HTTP
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+
+  GrafanaListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref AlbListenerArn
+      Priority: !Ref ListenerRulePriority
+      Conditions:
+        - Field: host-header
+          HostHeaderConfig:
+            Values:
+              - !Ref HostHeader
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref GrafanaTargetGroup
+
+Outputs:
+  MonitoringSecurityGroupId:
+    Value: !Ref MonitoringSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-MonitoringSecurityGroupId'
+  TargetGroupArn:
+    Value: !Ref GrafanaTargetGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-TargetGroupArn'

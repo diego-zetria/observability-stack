@@ -1,0 +1,611 @@
+{
+  "uid": "cloudwatch-logs",
+  "title": "Application Logs",
+  "description": "NestJS application logs from CloudWatch: log volume, error analysis, context breakdown, and log search.",
+  "tags": ["app-backend", "logs", "cloudwatch", "nestjs"],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "schemaVersion": 39,
+  "version": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "app",
+        "label": "Application",
+        "type": "query",
+        "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+        "query": {
+          "queryType": "logGroups",
+          "region": "us-east-1",
+          "logGroupPrefix": "/ecs/my-cluster/myapp"
+        },
+        "regex": "",
+        "sort": 1,
+        "multi": false,
+        "includeAll": false,
+        "refresh": 1,
+        "current": {
+          "text": "/ecs/my-cluster/myapp-backend-dev",
+          "value": "/ecs/my-cluster/myapp-backend-dev"
+        },
+        "options": []
+      },
+      {
+        "name": "search",
+        "label": "Search",
+        "type": "textbox",
+        "current": { "text": "", "value": "" },
+        "options": []
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 100,
+      "title": "Log Overview",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 1,
+      "title": "Total Logs",
+      "description": "Total number of log entries in the selected time range.",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 1 },
+      "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "color": { "fixedColor": "#1F60C4", "mode": "fixed" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "#1F60C4", "value": null }]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+          "region": "us-east-1",
+          "queryMode": "Logs",
+          "expression": "stats count(*) as total",
+          "logGroupNames": ["$app"]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Error Logs",
+      "description": "Total number of log entries with level=error in the selected time range.",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 1 },
+      "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "orange", "value": 10 },
+              { "color": "red", "value": 50 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+          "region": "us-east-1",
+          "queryMode": "Logs",
+          "expression": "parse @message /\"level\":\"(?<level>[^\"]+)\"/ | filter level = \"error\" | stats count(*) as errors",
+          "logGroupNames": ["$app"]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Warning Logs",
+      "description": "Total number of log entries with level=warn in the selected time range.",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 1 },
+      "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "orange", "value": 100 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+          "region": "us-east-1",
+          "queryMode": "Logs",
+          "expression": "parse @message /\"level\":\"(?<level>[^\"]+)\"/ | filter level = \"warn\" | stats count(*) as warnings",
+          "logGroupNames": ["$app"]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Info Logs",
+      "description": "Total number of log entries with level=info in the selected time range.",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 1 },
+      "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "color": { "fixedColor": "#73BF69", "mode": "fixed" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "#73BF69", "value": null }]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+          "region": "us-east-1",
+          "queryMode": "Logs",
+          "expression": "parse @message /\"level\":\"(?<level>[^\"]+)\"/ | filter level = \"info\" | stats count(*) as info",
+          "logGroupNames": ["$app"]
+        }
+      ]
+    },
+    {
+      "id": 200,
+      "title": "Log Volume",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 }
+    },
+    {
+      "id": 5,
+      "title": "Log Volume by Level",
+      "description": "Log ingestion rate over time, stacked by severity level. Provides a quick view of traffic and noise patterns.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 7 },
+      "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": ["sum"]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "barAlignment": 0,
+            "fillOpacity": 85,
+            "lineWidth": 0,
+            "showPoints": "never",
+            "stacking": { "mode": "normal", "group": "A" },
+            "gradientMode": "none",
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "axisColorMode": "text"
+          },
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "info" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#73BF69", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "warn" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#FADE2A", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "error" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#F2495C", "mode": "fixed" } }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+          "region": "us-east-1",
+          "queryMode": "Logs",
+          "expression": "parse @message /\"level\":\"(?<level>[^\"]+)\"/ | stats count(*) as cnt by level, bin(5m)",
+          "logGroupNames": ["$app"]
+        }
+      ]
+    },
+    {
+      "id": 300,
+      "title": "Analysis",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 }
+    },
+    {
+      "id": 6,
+      "title": "Errors by NestJS Context",
+      "description": "Top 10 NestJS modules (context field) generating errors. Identifies which service layer is most error-prone.",
+      "type": "barchart",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+      "options": {
+        "orientation": "horizontal",
+        "xField": "ctx",
+        "groupWidth": 0.7,
+        "barWidth": 0.7,
+        "showValue": "auto",
+        "fillOpacity": 85,
+        "gradientMode": "none",
+        "legend": { "displayMode": "hidden", "placement": "bottom" },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "fixedColor": "#F2495C", "mode": "fixed" },
+          "custom": {
+            "fillOpacity": 85,
+            "lineWidth": 0
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "#F2495C", "value": null }]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+          "region": "us-east-1",
+          "queryMode": "Logs",
+          "expression": "parse @message /\"level\":\"(?<level>[^\"]+)\"/ | parse @message /\"context\":\"(?<ctx>[^\"]+)\"/ | filter level = \"error\" | stats count(*) as errors by ctx | sort errors desc | limit 10",
+          "logGroupNames": ["$app"]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Top Error Messages",
+      "description": "Most frequent error messages in the selected time range, grouped by message content. Use this to prioritize bug fixes.",
+      "type": "table",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [{ "displayName": "cnt", "desc": true }],
+        "footer": {
+          "show": false,
+          "reducer": ["sum"],
+          "countRows": false,
+          "enablePagination": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "inspect": false,
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "msg" },
+            "properties": [
+              { "id": "displayName", "value": "Error Message" },
+              { "id": "custom.width", "value": 400 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "cnt" },
+            "properties": [
+              { "id": "displayName", "value": "Count" },
+              { "id": "custom.width", "value": 80 },
+              {
+                "id": "custom.cellOptions",
+                "value": { "type": "color-background", "mode": "gradient" }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "yellow", "value": 5 },
+                    { "color": "red", "value": 20 }
+                  ]
+                }
+              },
+              { "id": "color", "value": { "mode": "thresholds" } }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+          "region": "us-east-1",
+          "queryMode": "Logs",
+          "expression": "parse @message /\"level\":\"(?<level>[^\"]+)\"/ | parse @message /\"message\":\"(?<msg>[^\"]+)\"/ | filter level = \"error\" | stats count(*) as cnt by msg | sort cnt desc | limit 15",
+          "logGroupNames": ["$app"]
+        }
+      ]
+    },
+    {
+      "id": 400,
+      "title": "Warning Analysis",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 }
+    },
+    {
+      "id": 8,
+      "title": "Error Rate Over Time",
+      "description": "Time series of error log volume in 5-minute intervals. Spike detection for incident correlation.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
+      "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+      "options": {
+        "tooltip": { "mode": "single", "sort": "none" },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": ["sum", "max"]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "fixedColor": "#F2495C", "mode": "fixed" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "mode": "none", "group": "A" },
+            "axisBorderShow": false,
+            "axisColorMode": "text",
+            "thresholdsStyle": { "mode": "line" }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "transparent", "value": null }]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+          "region": "us-east-1",
+          "queryMode": "Logs",
+          "expression": "parse @message /\"level\":\"(?<level>[^\"]+)\"/ | filter level = \"error\" | stats count(*) as errors by bin(5m)",
+          "logGroupNames": ["$app"]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Warnings by Context",
+      "description": "Top 10 NestJS modules generating warnings. Useful for identifying noisy services before they escalate to errors.",
+      "type": "barchart",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 26 },
+      "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+      "options": {
+        "orientation": "horizontal",
+        "xField": "ctx",
+        "groupWidth": 0.7,
+        "barWidth": 0.7,
+        "showValue": "auto",
+        "fillOpacity": 85,
+        "gradientMode": "none",
+        "legend": { "displayMode": "hidden", "placement": "bottom" },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "fixedColor": "#FADE2A", "mode": "fixed" },
+          "custom": {
+            "fillOpacity": 85,
+            "lineWidth": 0
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "#FADE2A", "value": null }]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+          "region": "us-east-1",
+          "queryMode": "Logs",
+          "expression": "parse @message /\"level\":\"(?<level>[^\"]+)\"/ | parse @message /\"context\":\"(?<ctx>[^\"]+)\"/ | filter level = \"warn\" | stats count(*) as warnings by ctx | sort warnings desc | limit 10",
+          "logGroupNames": ["$app"]
+        }
+      ]
+    },
+    {
+      "id": 500,
+      "title": "Error & Warning Logs",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 }
+    },
+    {
+      "id": 10,
+      "title": "Error & Warning Logs",
+      "description": "Raw log entries with level error or warn, ordered newest first. Click a row to expand structured JSON fields.",
+      "type": "logs",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 35 },
+      "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending",
+        "enableInfiniteScrolling": false
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+          "region": "us-east-1",
+          "queryMode": "Logs",
+          "expression": "fields @timestamp, @message, @logStream | filter @message like /(?i)\"level\":\"(error|warn)\"/ | sort @timestamp desc | limit 200",
+          "logGroupNames": ["$app"]
+        }
+      ]
+    },
+    {
+      "id": 600,
+      "title": "All Logs",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 47 }
+    },
+    {
+      "id": 11,
+      "title": "All Application Logs",
+      "description": "Full log stream with optional search filter from the $search variable. Use the Search variable at the top to filter by any keyword, trace ID, or message fragment.",
+      "type": "logs",
+      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 48 },
+      "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending",
+        "enableInfiniteScrolling": false
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+          "region": "us-east-1",
+          "queryMode": "Logs",
+          "expression": "fields @timestamp, @message, @logStream | filter @message like /$search/ | sort @timestamp desc | limit 500",
+          "logGroupNames": ["$app"]
+        }
+      ]
+    }
+  ]
+}

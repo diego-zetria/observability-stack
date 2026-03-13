@@ -1,0 +1,2415 @@
+{
+  "uid": "infrastructure",
+  "title": "Infrastructure - ECS Services",
+  "description": "ECS Fargate service metrics via CloudWatch Container Insights",
+  "tags": [
+    "infrastructure",
+    "ecs",
+    "cloudwatch",
+    "container-insights"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "refresh": "1m",
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "hide": 2,
+        "name": "datasource",
+        "type": "constant",
+        "query": "cloudwatch",
+        "current": {
+          "text": "CloudWatch",
+          "value": "cloudwatch"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 100,
+      "title": "Health Overview",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "collapsed": false
+    },
+    {
+      "id": 1,
+      "title": "CPU Utilization",
+      "description": "Current CPU units utilized per service with trend sparkline",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 128
+              },
+              {
+                "color": "#FF9830",
+                "value": 256
+              },
+              {
+                "color": "#F2495C",
+                "value": 450
+              }
+            ]
+          },
+          "unit": "short",
+          "displayName": "CPU"
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "justifyMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "namespace": "ECS/ContainerInsights",
+          "metricName": "CpuUtilized",
+          "dimensions": {
+            "ClusterName": [
+              "my-cluster"
+            ],
+            "ServiceName": [
+              "myapp-backend-dev",
+              "myapp-app-front-dev",
+              "myapp-backoffice-front-dev",
+              "obs-monitoring-dev"
+            ]
+          },
+          "statistics": [
+            "Average"
+          ],
+          "period": "300",
+          "matchExact": true,
+          "refId": "A",
+          "region": "us-east-1"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Memory Utilization",
+      "description": "Current memory utilized per service (MB) with trend sparkline",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 512
+              },
+              {
+                "color": "#FF9830",
+                "value": 768
+              },
+              {
+                "color": "#F2495C",
+                "value": 900
+              }
+            ]
+          },
+          "unit": "decmbytes",
+          "displayName": "Memory"
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "justifyMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "namespace": "ECS/ContainerInsights",
+          "metricName": "MemoryUtilized",
+          "dimensions": {
+            "ClusterName": [
+              "my-cluster"
+            ],
+            "ServiceName": [
+              "myapp-backend-dev",
+              "myapp-app-front-dev",
+              "myapp-backoffice-front-dev",
+              "obs-monitoring-dev"
+            ]
+          },
+          "statistics": [
+            "Average"
+          ],
+          "period": "300",
+          "matchExact": true,
+          "refId": "A",
+          "region": "us-east-1"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Running Tasks",
+      "description": "Number of running tasks per service",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2495C",
+                "value": null
+              },
+              {
+                "color": "#73BF69",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short",
+          "displayName": "Running"
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "justifyMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "namespace": "ECS/ContainerInsights",
+          "metricName": "RunningTaskCount",
+          "dimensions": {
+            "ClusterName": [
+              "my-cluster"
+            ],
+            "ServiceName": [
+              "myapp-backend-dev",
+              "myapp-app-front-dev",
+              "myapp-backoffice-front-dev",
+              "obs-monitoring-dev"
+            ]
+          },
+          "statistics": [
+            "Average"
+          ],
+          "period": "300",
+          "matchExact": true,
+          "refId": "A",
+          "region": "us-east-1"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "title": "Desired Tasks",
+      "description": "Number of desired tasks per service",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F2495C",
+                "value": null
+              },
+              {
+                "color": "#3274D9",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short",
+          "displayName": "Desired"
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "justifyMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "namespace": "ECS/ContainerInsights",
+          "metricName": "DesiredTaskCount",
+          "dimensions": {
+            "ClusterName": [
+              "my-cluster"
+            ],
+            "ServiceName": [
+              "myapp-backend-dev",
+              "myapp-app-front-dev",
+              "myapp-backoffice-front-dev",
+              "obs-monitoring-dev"
+            ]
+          },
+          "statistics": [
+            "Average"
+          ],
+          "period": "300",
+          "matchExact": true,
+          "refId": "A",
+          "region": "us-east-1"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "title": "Pending Tasks",
+      "description": "Tasks pending scheduling - sustained values > 0 indicate resource constraints",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 1
+              },
+              {
+                "color": "#F2495C",
+                "value": 3
+              }
+            ]
+          },
+          "unit": "short",
+          "displayName": "Pending"
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "justifyMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "namespace": "ECS/ContainerInsights",
+          "metricName": "PendingTaskCount",
+          "dimensions": {
+            "ClusterName": [
+              "my-cluster"
+            ],
+            "ServiceName": [
+              "myapp-backend-dev",
+              "myapp-app-front-dev",
+              "myapp-backoffice-front-dev",
+              "obs-monitoring-dev"
+            ]
+          },
+          "statistics": [
+            "Average"
+          ],
+          "period": "300",
+          "matchExact": true,
+          "refId": "A",
+          "region": "us-east-1"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Network Rate",
+      "description": "Network receive/transmit bytes per second",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3274D9"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3274D9",
+                "value": null
+              }
+            ]
+          },
+          "unit": "Bps",
+          "displayName": "Network"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*Rx.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#73BF69",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "Rx"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*Tx.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#5794F2",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "Tx"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "justifyMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "namespace": "ECS/ContainerInsights",
+          "metricName": "NetworkRxBytes",
+          "dimensions": {
+            "ClusterName": [
+              "my-cluster"
+            ],
+            "ServiceName": [
+              "myapp-backend-dev",
+              "myapp-app-front-dev",
+              "myapp-backoffice-front-dev",
+              "obs-monitoring-dev"
+            ]
+          },
+          "statistics": [
+            "Average"
+          ],
+          "period": "300",
+          "matchExact": true,
+          "refId": "A",
+          "label": "Rx",
+          "region": "us-east-1"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "namespace": "ECS/ContainerInsights",
+          "metricName": "NetworkTxBytes",
+          "dimensions": {
+            "ClusterName": [
+              "my-cluster"
+            ],
+            "ServiceName": [
+              "myapp-backend-dev",
+              "myapp-app-front-dev",
+              "myapp-backoffice-front-dev",
+              "obs-monitoring-dev"
+            ]
+          },
+          "statistics": [
+            "Average"
+          ],
+          "period": "300",
+          "matchExact": true,
+          "refId": "B",
+          "label": "Tx",
+          "region": "us-east-1"
+        }
+      ]
+    },
+    {
+      "id": 101,
+      "title": "Resource Utilization",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "collapsed": false
+    },
+    {
+      "id": 10,
+      "title": "CPU Utilized (vCPU)",
+      "description": "Current CPU units utilized per service",
+      "type": "gauge",
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 0,
+        "y": 6
+      },
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 128
+              },
+              {
+                "color": "#FF9830",
+                "value": 256
+              },
+              {
+                "color": "#F2495C",
+                "value": 450
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0,
+          "max": 512
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "namespace": "ECS/ContainerInsights",
+          "metricName": "CpuUtilized",
+          "dimensions": {
+            "ClusterName": [
+              "my-cluster"
+            ],
+            "ServiceName": [
+              "myapp-backend-dev",
+              "myapp-app-front-dev",
+              "myapp-backoffice-front-dev",
+              "obs-monitoring-dev"
+            ]
+          },
+          "statistics": [
+            "Average"
+          ],
+          "period": "300",
+          "matchExact": true,
+          "refId": "A",
+          "region": "us-east-1"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Memory Utilized (MB)",
+      "description": "Current memory utilized per service",
+      "type": "gauge",
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 4,
+        "y": 6
+      },
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 512
+              },
+              {
+                "color": "#FF9830",
+                "value": 768
+              },
+              {
+                "color": "#F2495C",
+                "value": 900
+              }
+            ]
+          },
+          "unit": "decmbytes",
+          "min": 0,
+          "max": 1024
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "namespace": "ECS/ContainerInsights",
+          "metricName": "MemoryUtilized",
+          "dimensions": {
+            "ClusterName": [
+              "my-cluster"
+            ],
+            "ServiceName": [
+              "myapp-backend-dev",
+              "myapp-app-front-dev",
+              "myapp-backoffice-front-dev",
+              "obs-monitoring-dev"
+            ]
+          },
+          "statistics": [
+            "Average"
+          ],
+          "period": "300",
+          "matchExact": true,
+          "refId": "A",
+          "region": "us-east-1"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "CPU per Service (vCPU units)",
+      "description": "CPU utilization comparison across services - bar gauge",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 6
+      },
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 128
+              },
+              {
+                "color": "#FF9830",
+                "value": 256
+              },
+              {
+                "color": "#F2495C",
+                "value": 450
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0,
+          "max": 512
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "text",
+        "namePlacement": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "namespace": "ECS/ContainerInsights",
+          "metricName": "CpuUtilized",
+          "dimensions": {
+            "ClusterName": [
+              "my-cluster"
+            ],
+            "ServiceName": [
+              "myapp-backend-dev",
+              "myapp-app-front-dev",
+              "myapp-backoffice-front-dev",
+              "obs-monitoring-dev"
+            ]
+          },
+          "statistics": [
+            "Average"
+          ],
+          "period": "300",
+          "matchExact": true,
+          "refId": "A",
+          "region": "us-east-1"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Memory per Service (MB)",
+      "description": "Memory utilization comparison across services - bar gauge",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 6
+      },
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 512
+              },
+              {
+                "color": "#FF9830",
+                "value": 768
+              },
+              {
+                "color": "#F2495C",
+                "value": 900
+              }
+            ]
+          },
+          "unit": "decmbytes",
+          "min": 0,
+          "max": 1024
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "text",
+        "namePlacement": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "namespace": "ECS/ContainerInsights",
+          "metricName": "MemoryUtilized",
+          "dimensions": {
+            "ClusterName": [
+              "my-cluster"
+            ],
+            "ServiceName": [
+              "myapp-backend-dev",
+              "myapp-app-front-dev",
+              "myapp-backoffice-front-dev",
+              "obs-monitoring-dev"
+            ]
+          },
+          "statistics": [
+            "Average"
+          ],
+          "period": "300",
+          "matchExact": true,
+          "refId": "A",
+          "region": "us-east-1"
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "title": "CPU & Memory Over Time",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "collapsed": false
+    },
+    {
+      "id": 5,
+      "title": "CPU Utilized (vCPU units)",
+      "description": "CPU units utilized per service over time",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "vCPU units",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "#F2495C",
+                "value": 450
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        }
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "namespace": "ECS/ContainerInsights",
+          "metricName": "CpuUtilized",
+          "dimensions": {
+            "ClusterName": [
+              "my-cluster"
+            ],
+            "ServiceName": [
+              "myapp-backend-dev",
+              "myapp-app-front-dev",
+              "myapp-backoffice-front-dev",
+              "obs-monitoring-dev"
+            ]
+          },
+          "statistics": [
+            "Average"
+          ],
+          "period": "300",
+          "matchExact": true,
+          "refId": "A",
+          "region": "us-east-1"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Memory Utilized (MB)",
+      "description": "Memory utilization per service over time",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "MB",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "#F2495C",
+                "value": 900
+              }
+            ]
+          },
+          "unit": "decmbytes",
+          "min": 0
+        }
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "namespace": "ECS/ContainerInsights",
+          "metricName": "MemoryUtilized",
+          "dimensions": {
+            "ClusterName": [
+              "my-cluster"
+            ],
+            "ServiceName": [
+              "myapp-backend-dev",
+              "myapp-app-front-dev",
+              "myapp-backoffice-front-dev",
+              "obs-monitoring-dev"
+            ]
+          },
+          "statistics": [
+            "Average"
+          ],
+          "period": "300",
+          "matchExact": true,
+          "refId": "A",
+          "region": "us-east-1"
+        }
+      ]
+    },
+    {
+      "id": 103,
+      "title": "Right-Sizing Analysis",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 20,
+          "title": "CPU: Reserved vs Utilized",
+          "description": "Compare reserved CPU capacity against actual utilization to identify over-provisioning",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 22
+          },
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "vCPU units",
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "opacity",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              },
+              "unit": "short",
+              "min": 0
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": ".*Reserved.*"
+                },
+                "properties": [
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash",
+                      "dash": [
+                        10,
+                        10
+                      ]
+                    }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#F2495C",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": ".*Utilized.*"
+                },
+                "properties": [
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 25
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#3274D9",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "calcs": [
+                "mean",
+                "max",
+                "lastNotNull"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "cloudwatch"
+              },
+              "namespace": "ECS/ContainerInsights",
+              "metricName": "CpuReserved",
+              "dimensions": {
+                "ClusterName": [
+                  "my-cluster"
+                ],
+                "ServiceName": [
+                  "myapp-backend-dev",
+                  "myapp-app-front-dev",
+                  "myapp-backoffice-front-dev",
+                  "obs-monitoring-dev"
+                ]
+              },
+              "statistics": [
+                "Average"
+              ],
+              "period": "300",
+              "matchExact": true,
+              "refId": "A",
+              "label": "Reserved",
+              "region": "us-east-1"
+            },
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "cloudwatch"
+              },
+              "namespace": "ECS/ContainerInsights",
+              "metricName": "CpuUtilized",
+              "dimensions": {
+                "ClusterName": [
+                  "my-cluster"
+                ],
+                "ServiceName": [
+                  "myapp-backend-dev",
+                  "myapp-app-front-dev",
+                  "myapp-backoffice-front-dev",
+                  "obs-monitoring-dev"
+                ]
+              },
+              "statistics": [
+                "Average"
+              ],
+              "period": "300",
+              "matchExact": true,
+              "refId": "B",
+              "label": "Utilized",
+              "region": "us-east-1"
+            }
+          ]
+        },
+        {
+          "id": 21,
+          "title": "Memory: Reserved vs Utilized",
+          "description": "Compare reserved memory against actual utilization to identify over-provisioning",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 22
+          },
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "MB",
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "opacity",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              },
+              "unit": "decmbytes",
+              "min": 0
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": ".*Reserved.*"
+                },
+                "properties": [
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash",
+                      "dash": [
+                        10,
+                        10
+                      ]
+                    }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#F2495C",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": ".*Utilized.*"
+                },
+                "properties": [
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 25
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#8F3BB8",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "calcs": [
+                "mean",
+                "max",
+                "lastNotNull"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "cloudwatch"
+              },
+              "namespace": "ECS/ContainerInsights",
+              "metricName": "MemoryReserved",
+              "dimensions": {
+                "ClusterName": [
+                  "my-cluster"
+                ],
+                "ServiceName": [
+                  "myapp-backend-dev",
+                  "myapp-app-front-dev",
+                  "myapp-backoffice-front-dev",
+                  "obs-monitoring-dev"
+                ]
+              },
+              "statistics": [
+                "Average"
+              ],
+              "period": "300",
+              "matchExact": true,
+              "refId": "A",
+              "label": "Reserved",
+              "region": "us-east-1"
+            },
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "cloudwatch"
+              },
+              "namespace": "ECS/ContainerInsights",
+              "metricName": "MemoryUtilized",
+              "dimensions": {
+                "ClusterName": [
+                  "my-cluster"
+                ],
+                "ServiceName": [
+                  "myapp-backend-dev",
+                  "myapp-app-front-dev",
+                  "myapp-backoffice-front-dev",
+                  "obs-monitoring-dev"
+                ]
+              },
+              "statistics": [
+                "Average"
+              ],
+              "period": "300",
+              "matchExact": true,
+              "refId": "B",
+              "label": "Utilized",
+              "region": "us-east-1"
+            }
+          ]
+        },
+        {
+          "id": 22,
+          "title": "Ephemeral Storage: Reserved vs Utilized",
+          "description": "Ephemeral storage capacity analysis per service",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 30
+          },
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "GB",
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "opacity",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              },
+              "unit": "decgbytes",
+              "min": 0
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": ".*Reserved.*"
+                },
+                "properties": [
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash",
+                      "dash": [
+                        10,
+                        10
+                      ]
+                    }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#F2495C",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": ".*Utilized.*"
+                },
+                "properties": [
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 25
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#FF9830",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "calcs": [
+                "mean",
+                "max",
+                "lastNotNull"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "cloudwatch"
+              },
+              "namespace": "ECS/ContainerInsights",
+              "metricName": "EphemeralStorageReserved",
+              "dimensions": {
+                "ClusterName": [
+                  "my-cluster"
+                ],
+                "ServiceName": [
+                  "myapp-backend-dev",
+                  "myapp-app-front-dev",
+                  "myapp-backoffice-front-dev",
+                  "obs-monitoring-dev"
+                ]
+              },
+              "statistics": [
+                "Average"
+              ],
+              "period": "300",
+              "matchExact": true,
+              "refId": "A",
+              "label": "Reserved",
+              "region": "us-east-1"
+            },
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "cloudwatch"
+              },
+              "namespace": "ECS/ContainerInsights",
+              "metricName": "EphemeralStorageUtilized",
+              "dimensions": {
+                "ClusterName": [
+                  "my-cluster"
+                ],
+                "ServiceName": [
+                  "myapp-backend-dev",
+                  "myapp-app-front-dev",
+                  "myapp-backoffice-front-dev",
+                  "obs-monitoring-dev"
+                ]
+              },
+              "statistics": [
+                "Average"
+              ],
+              "period": "300",
+              "matchExact": true,
+              "refId": "B",
+              "label": "Utilized",
+              "region": "us-east-1"
+            }
+          ]
+        },
+        {
+          "id": 23,
+          "title": "Resource Efficiency Table",
+          "description": "Service-by-service resource efficiency comparison",
+          "type": "table",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 30
+          },
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#73BF69",
+                    "value": null
+                  },
+                  {
+                    "color": "#EAB839",
+                    "value": 200
+                  },
+                  {
+                    "color": "#F2495C",
+                    "value": 400
+                  }
+                ]
+              },
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "color-text"
+                },
+                "inspect": false
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "ServiceName"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 250
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "sortBy": [
+              {
+                "desc": true,
+                "displayName": "CpuUtilized"
+              }
+            ],
+            "frameIndex": 0,
+            "cellHeight": "sm"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "cloudwatch"
+              },
+              "namespace": "ECS/ContainerInsights",
+              "metricName": "CpuUtilized",
+              "dimensions": {
+                "ClusterName": [
+                  "my-cluster"
+                ],
+                "ServiceName": [
+                  "myapp-backend-dev",
+                  "myapp-app-front-dev",
+                  "myapp-backoffice-front-dev",
+                  "obs-monitoring-dev"
+                ]
+              },
+              "statistics": [
+                "Average"
+              ],
+              "period": "300",
+              "matchExact": true,
+              "refId": "A",
+              "region": "us-east-1"
+            },
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "cloudwatch"
+              },
+              "namespace": "ECS/ContainerInsights",
+              "metricName": "MemoryUtilized",
+              "dimensions": {
+                "ClusterName": [
+                  "my-cluster"
+                ],
+                "ServiceName": [
+                  "myapp-backend-dev",
+                  "myapp-app-front-dev",
+                  "myapp-backoffice-front-dev",
+                  "obs-monitoring-dev"
+                ]
+              },
+              "statistics": [
+                "Average"
+              ],
+              "period": "300",
+              "matchExact": true,
+              "refId": "B",
+              "region": "us-east-1"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 104,
+      "title": "Network & Storage",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "collapsed": false
+    },
+    {
+      "id": 7,
+      "title": "Network I/O (Bytes/s)",
+      "description": "Network receive and transmit throughput per service",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": true,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "unit": "Bps"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*Rx.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#73BF69",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*Tx.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#5794F2",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "namespace": "ECS/ContainerInsights",
+          "metricName": "NetworkRxBytes",
+          "dimensions": {
+            "ClusterName": [
+              "my-cluster"
+            ],
+            "ServiceName": [
+              "myapp-backend-dev",
+              "myapp-app-front-dev",
+              "myapp-backoffice-front-dev",
+              "obs-monitoring-dev"
+            ]
+          },
+          "statistics": [
+            "Average"
+          ],
+          "period": "300",
+          "matchExact": true,
+          "refId": "A",
+          "label": "Rx",
+          "region": "us-east-1"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "namespace": "ECS/ContainerInsights",
+          "metricName": "NetworkTxBytes",
+          "dimensions": {
+            "ClusterName": [
+              "my-cluster"
+            ],
+            "ServiceName": [
+              "myapp-backend-dev",
+              "myapp-app-front-dev",
+              "myapp-backoffice-front-dev",
+              "obs-monitoring-dev"
+            ]
+          },
+          "statistics": [
+            "Average"
+          ],
+          "period": "300",
+          "matchExact": true,
+          "refId": "B",
+          "label": "Tx",
+          "region": "us-east-1"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Storage I/O (Bytes/s)",
+      "description": "EFS/Storage read and write throughput per service",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cloudwatch"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": true,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "unit": "Bps"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*Read.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FF9830",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*Write.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FADE2A",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "namespace": "ECS/ContainerInsights",
+          "metricName": "StorageReadBytes",
+          "dimensions": {
+            "ClusterName": [
+              "my-cluster"
+            ],
+            "ServiceName": [
+              "myapp-backend-dev",
+              "myapp-app-front-dev",
+              "myapp-backoffice-front-dev",
+              "obs-monitoring-dev"
+            ]
+          },
+          "statistics": [
+            "Average"
+          ],
+          "period": "300",
+          "matchExact": true,
+          "refId": "A",
+          "label": "Read",
+          "region": "us-east-1"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "namespace": "ECS/ContainerInsights",
+          "metricName": "StorageWriteBytes",
+          "dimensions": {
+            "ClusterName": [
+              "my-cluster"
+            ],
+            "ServiceName": [
+              "myapp-backend-dev",
+              "myapp-app-front-dev",
+              "myapp-backoffice-front-dev",
+              "obs-monitoring-dev"
+            ]
+          },
+          "statistics": [
+            "Average"
+          ],
+          "period": "300",
+          "matchExact": true,
+          "refId": "B",
+          "label": "Write",
+          "region": "us-east-1"
+        }
+      ]
+    },
+    {
+      "id": 105,
+      "title": "Task Scaling & Health",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 40,
+          "title": "Desired vs Running Tasks",
+          "description": "Compare desired task count with running tasks to detect scaling issues or task failures",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 32
+          },
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "Tasks",
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "opacity",
+                "lineInterpolation": "stepAfter",
+                "lineWidth": 2,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              },
+              "unit": "short",
+              "min": 0,
+              "decimals": 0
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": ".*Desired.*"
+                },
+                "properties": [
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash",
+                      "dash": [
+                        10,
+                        10
+                      ]
+                    }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#5794F2",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": ".*Running.*"
+                },
+                "properties": [
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 20
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#73BF69",
+                      "mode": "fixed"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byRegexp",
+                  "options": ".*Pending.*"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#FF9830",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 30
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "calcs": [
+                "mean",
+                "max",
+                "lastNotNull"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "cloudwatch"
+              },
+              "namespace": "ECS/ContainerInsights",
+              "metricName": "DesiredTaskCount",
+              "dimensions": {
+                "ClusterName": [
+                  "my-cluster"
+                ],
+                "ServiceName": [
+                  "myapp-backend-dev",
+                  "myapp-app-front-dev",
+                  "myapp-backoffice-front-dev",
+                  "obs-monitoring-dev"
+                ]
+              },
+              "statistics": [
+                "Average"
+              ],
+              "period": "300",
+              "matchExact": true,
+              "refId": "A",
+              "label": "Desired",
+              "region": "us-east-1"
+            },
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "cloudwatch"
+              },
+              "namespace": "ECS/ContainerInsights",
+              "metricName": "RunningTaskCount",
+              "dimensions": {
+                "ClusterName": [
+                  "my-cluster"
+                ],
+                "ServiceName": [
+                  "myapp-backend-dev",
+                  "myapp-app-front-dev",
+                  "myapp-backoffice-front-dev",
+                  "obs-monitoring-dev"
+                ]
+              },
+              "statistics": [
+                "Average"
+              ],
+              "period": "300",
+              "matchExact": true,
+              "refId": "B",
+              "label": "Running",
+              "region": "us-east-1"
+            },
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "cloudwatch"
+              },
+              "namespace": "ECS/ContainerInsights",
+              "metricName": "PendingTaskCount",
+              "dimensions": {
+                "ClusterName": [
+                  "my-cluster"
+                ],
+                "ServiceName": [
+                  "myapp-backend-dev",
+                  "myapp-app-front-dev",
+                  "myapp-backoffice-front-dev",
+                  "obs-monitoring-dev"
+                ]
+              },
+              "statistics": [
+                "Average"
+              ],
+              "period": "300",
+              "matchExact": true,
+              "refId": "C",
+              "label": "Pending",
+              "region": "us-east-1"
+            }
+          ]
+        },
+        {
+          "id": 41,
+          "title": "Task Count per Service",
+          "description": "Current running task count for each service",
+          "type": "bargauge",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 32
+          },
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cloudwatch"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#F2495C",
+                    "value": null
+                  },
+                  {
+                    "color": "#73BF69",
+                    "value": 1
+                  }
+                ]
+              },
+              "unit": "short",
+              "min": 0,
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "orientation": "horizontal",
+            "displayMode": "gradient",
+            "showUnfilled": true,
+            "valueMode": "text",
+            "namePlacement": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "cloudwatch"
+              },
+              "namespace": "ECS/ContainerInsights",
+              "metricName": "RunningTaskCount",
+              "dimensions": {
+                "ClusterName": [
+                  "my-cluster"
+                ],
+                "ServiceName": [
+                  "myapp-backend-dev",
+                  "myapp-app-front-dev",
+                  "myapp-backoffice-front-dev",
+                  "obs-monitoring-dev"
+                ]
+              },
+              "statistics": [
+                "Average"
+              ],
+              "period": "300",
+              "matchExact": true,
+              "refId": "A",
+              "region": "us-east-1"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

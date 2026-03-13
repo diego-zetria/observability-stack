@@ -1,0 +1,148 @@
+# =============================================================================
+# Prometheus Alert Rules - Observability
+# =============================================================================
+
+groups:
+  # --------------------------------------------------------------------------
+  # API / Application Alerts
+  # --------------------------------------------------------------------------
+  - name: app-api
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m]))
+            /
+            sum(rate(http_server_request_duration_seconds_count[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%) for the last 5 minutes."
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))
+          > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High P95 latency"
+          description: "P95 request latency is {{ $value | humanizeDuration }} (threshold: 2s)."
+
+      - alert: HealthCheckFailing
+        expr: up{job="app-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Application backend health check failing"
+          description: "Backend is unreachable for over 1 minute."
+
+  # --------------------------------------------------------------------------
+  # Business Metrics Alerts
+  # --------------------------------------------------------------------------
+  - name: app-business
+    rules:
+      - alert: PaymentFailures
+        expr: |
+          (
+            sum(rate(payments_processed_total{status="failed"}[5m]))
+            /
+            sum(rate(payments_processed_total[5m]))
+          ) > 0.10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High payment failure rate"
+          description: "Payment failure rate is {{ $value | humanizePercentage }} (threshold: 10%)."
+
+      - alert: WhatsAppDown
+        expr: |
+          sum(rate(whatsapp_messages_total{status="error"}[5m]))
+          /
+          sum(rate(whatsapp_messages_total[5m]))
+          > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "WhatsApp integration degraded"
+          description: "WhatsApp error rate is {{ $value | humanizePercentage }}."
+
+  # --------------------------------------------------------------------------
+  # Infrastructure Alerts
+  # --------------------------------------------------------------------------
+  - name: app-infra
+    rules:
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on host"
+          description: "Memory usage is {{ $value | humanizePercentage }}."
+
+      - alert: HighCPUUsage
+        expr: |
+          (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on host"
+          description: "CPU usage is {{ $value | humanizePercentage }}."
+
+  # --------------------------------------------------------------------------
+  # Database Alerts
+  # --------------------------------------------------------------------------
+  - name: app-database
+    rules:
+      - alert: DatabaseConnectionPoolExhausted
+        expr: |
+          pg_stat_activity_count / pg_settings_max_connections > 0.90
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL connection pool near exhaustion"
+          description: "Connection usage is {{ $value | humanizePercentage }} of max."
+
+      - alert: DatabaseDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is unreachable"
+          description: "postgres-exporter cannot connect to PostgreSQL."
+
+  # --------------------------------------------------------------------------
+  # Redis Alerts
+  # --------------------------------------------------------------------------
+  - name: app-redis
+    rules:
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is unreachable"
+          description: "redis-exporter cannot connect to Redis."
+
+      - alert: RedisHighMemory
+        expr: |
+          redis_memory_used_bytes / redis_memory_max_bytes > 0.80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}."

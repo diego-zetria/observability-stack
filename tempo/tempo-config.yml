@@ -1,0 +1,67 @@
+# =============================================================================
+# Tempo Configuration - Observability
+# =============================================================================
+# Local development config with local filesystem storage.
+# For production, migrate to S3 backend.
+
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9095
+  log_level: warn
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "0.0.0.0:4317"
+        http:
+          endpoint: "0.0.0.0:4318"
+
+ingester:
+  trace_idle_period: 30s
+  max_block_bytes: 1073741824  # 1GB
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    block_retention: 48h  # 2 days (dev)
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks
+
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+      service: myapp
+  storage:
+    path: /var/tempo/generator/wal
+    remote_write:
+      - url: http://prometheus:9090/api/v1/write
+        send_exemplars: true
+  traces_storage:
+    path: /var/tempo/generator/traces
+  processor:
+    span_metrics:
+      dimensions:
+        - http.method
+        - http.route
+        - http.status_code
+        - service.name
+    service_graphs:
+      dimensions:
+        - http.method
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors:
+        - service-graphs
+        - span-metrics
+        - local-blocks

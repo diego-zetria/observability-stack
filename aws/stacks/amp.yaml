@@ -1,0 +1,133 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Observability - AWS Managed Prometheus'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+
+Resources:
+  AmpWorkspace:
+    Type: AWS::APS::Workspace
+    Properties:
+      Alias: !Sub 'obs-monitoring-${Environment}'
+      Tags:
+        - Key: Project
+          Value: obs-monitoring
+        - Key: Environment
+          Value: !Ref Environment
+
+  AlertRuleGroup:
+    Type: AWS::APS::RuleGroupsNamespace
+    Properties:
+      Workspace: !Ref AmpWorkspace
+      Name: myapp-alerts
+      Data: |
+        groups:
+          - name: app-api
+            rules:
+              - alert: HighErrorRate
+                expr: |
+                  (
+                    sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m]))
+                    /
+                    sum(rate(http_server_request_duration_seconds_count[5m]))
+                  ) > 0.05
+                for: 5m
+                labels:
+                  severity: critical
+                annotations:
+                  summary: "High error rate detected"
+                  description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)."
+
+              - alert: HighLatencyP95
+                expr: |
+                  histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le))
+                  > 2
+                for: 5m
+                labels:
+                  severity: warning
+                annotations:
+                  summary: "High P95 latency"
+                  description: "P95 latency is {{ $value | humanizeDuration }} (threshold: 2s)."
+
+          - name: app-business
+            rules:
+              - alert: PaymentFailures
+                expr: |
+                  (
+                    sum(rate(payments_processed_total{status="failed"}[5m]))
+                    /
+                    sum(rate(payments_processed_total[5m]))
+                  ) > 0.10
+                for: 5m
+                labels:
+                  severity: critical
+                annotations:
+                  summary: "High payment failure rate"
+
+              - alert: WhatsAppDown
+                expr: |
+                  sum(rate(whatsapp_messages_total{status="error"}[5m]))
+                  /
+                  sum(rate(whatsapp_messages_total[5m]))
+                  > 0.5
+                for: 5m
+                labels:
+                  severity: warning
+                annotations:
+                  summary: "WhatsApp integration degraded"
+
+          - name: app-database
+            rules:
+              - alert: DatabaseConnectionPoolExhausted
+                expr: pg_stat_activity_count / pg_settings_max_connections > 0.90
+                for: 3m
+                labels:
+                  severity: critical
+                annotations:
+                  summary: "PostgreSQL connection pool near exhaustion"
+
+              - alert: DatabaseDown
+                expr: pg_up == 0
+                for: 1m
+                labels:
+                  severity: critical
+                annotations:
+                  summary: "PostgreSQL is unreachable"
+
+          - name: app-redis
+            rules:
+              - alert: RedisDown
+                expr: redis_up == 0
+                for: 1m
+                labels:
+                  severity: critical
+                annotations:
+                  summary: "Redis is unreachable"
+
+              - alert: RedisHighMemory
+                expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.80
+                for: 5m
+                labels:
+                  severity: warning
+                annotations:
+                  summary: "Redis memory usage high"
+
+Outputs:
+  WorkspaceId:
+    Value: !Ref AmpWorkspace
+    Export:
+      Name: !Sub '${AWS::StackName}-WorkspaceId'
+  WorkspaceArn:
+    Value: !GetAtt AmpWorkspace.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-WorkspaceArn'
+  RemoteWriteUrl:
+    Value: !Sub 'https://aps-workspaces.${AWS::Region}.amazonaws.com/workspaces/${AmpWorkspace.WorkspaceId}/api/v1/remote_write'
+    Export:
+      Name: !Sub '${AWS::StackName}-RemoteWriteUrl'
+  QueryUrl:
+    Value: !Sub 'https://aps-workspaces.${AWS::Region}.amazonaws.com/workspaces/${AmpWorkspace.WorkspaceId}'
+    Export:
+      Name: !Sub '${AWS::StackName}-QueryUrl'

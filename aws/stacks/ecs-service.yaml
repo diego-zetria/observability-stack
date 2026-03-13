@@ -1,0 +1,323 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Observability - ECS Task Definition + Service'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+  ClusterName:
+    Type: String
+    Default: my-cluster
+  TaskExecutionRoleArn:
+    Type: String
+  TaskRoleArn:
+    Type: String
+  PrivateSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+  SecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  EfsFileSystemId:
+    Type: String
+  GrafanaAccessPointId:
+    Type: String
+  TempoAccessPointId:
+    Type: String
+  TargetGroupArn:
+    Type: String
+  S3BucketName:
+    Type: String
+  AmpRemoteWriteUrl:
+    Type: String
+  AmpQueryUrl:
+    Type: String
+  GrafanaAdminPassword:
+    Type: String
+    Default: admin
+    NoEcho: true
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+Resources:
+  # CloudMap Service Discovery
+  ServiceDiscoveryNamespace:
+    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
+    Properties:
+      Name: monitoring.myapp.local
+      Vpc: !Ref VpcId
+      Description: Monitoring stack service discovery
+
+  DiscoveryService:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Name: alloy
+      NamespaceId: !Ref ServiceDiscoveryNamespace
+      DnsConfig:
+        RoutingPolicy: MULTIVALUE
+        DnsRecords:
+          - TTL: 5
+            Type: A
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ecs/obs-monitoring-${Environment}'
+      RetentionInDays: 14
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub 'obs-monitoring-${Environment}'
+      Cpu: '2048'
+      Memory: '4096'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      RuntimePlatform:
+        CpuArchitecture: ARM64
+        OperatingSystemFamily: LINUX
+      ExecutionRoleArn: !Ref TaskExecutionRoleArn
+      TaskRoleArn: !Ref TaskRoleArn
+      Volumes:
+        - Name: grafana-data
+          EFSVolumeConfiguration:
+            FilesystemId: !Ref EfsFileSystemId
+            RootDirectory: /
+            TransitEncryption: ENABLED
+            AuthorizationConfig:
+              AccessPointId: !Ref GrafanaAccessPointId
+              IAM: ENABLED
+        - Name: tempo-data
+          EFSVolumeConfiguration:
+            FilesystemId: !Ref EfsFileSystemId
+            RootDirectory: /
+            TransitEncryption: ENABLED
+            AuthorizationConfig:
+              AccessPointId: !Ref TempoAccessPointId
+              IAM: ENABLED
+      ContainerDefinitions:
+        - Name: grafana
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/obs-monitoring-grafana:latest'
+          Essential: true
+          Cpu: 512
+          Memory: 1024
+          PortMappings:
+            - ContainerPort: 3000
+              Protocol: tcp
+          Environment:
+            - Name: GF_SECURITY_ADMIN_USER
+              Value: admin
+            - Name: GF_SECURITY_ADMIN_PASSWORD
+              Value: !Ref GrafanaAdminPassword
+            - Name: GF_AUTH_ANONYMOUS_ENABLED
+              Value: 'false'
+            - Name: GF_USERS_DEFAULT_THEME
+              Value: dark
+            - Name: GF_EXPLORE_ENABLED
+              Value: 'true'
+            - Name: GF_FEATURE_TOGGLES_ENABLE
+              Value: traceQLStreaming metricsSummary
+            - Name: GF_AUTH_SIGV4_AUTH_ENABLED
+              Value: 'true'
+            - Name: AWS_REGION
+              Value: !Ref 'AWS::Region'
+            - Name: AMP_QUERY_URL
+              Value: !Ref AmpQueryUrl
+          MountPoints:
+            - SourceVolume: grafana-data
+              ContainerPath: /var/lib/grafana
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - 'curl -f http://localhost:3000/api/health || exit 1'
+            Interval: 30
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 60
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: grafana
+
+        - Name: loki
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/obs-monitoring-loki:latest'
+          Essential: true
+          Cpu: 512
+          Memory: 1024
+          Command:
+            - '-config.file=/etc/loki/config.yml'
+            - '-config.expand-env=true'
+          PortMappings:
+            - ContainerPort: 3100
+              Protocol: tcp
+          Environment:
+            - Name: AWS_REGION
+              Value: !Ref 'AWS::Region'
+            - Name: S3_BUCKET_NAME
+              Value: !Ref S3BucketName
+          HealthCheck:
+            Command:
+              - CMD
+              - /usr/bin/loki
+              - '-health'
+            Interval: 30
+            Timeout: 10
+            Retries: 5
+            StartPeriod: 30
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: loki
+
+        - Name: tempo
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/obs-monitoring-tempo:latest'
+          Essential: true
+          Cpu: 512
+          Memory: 1024
+          Command:
+            - '-config.file=/etc/tempo/config.yml'
+            - '-config.expand-env=true'
+          PortMappings:
+            - ContainerPort: 3200
+              Protocol: tcp
+          Environment:
+            - Name: AWS_REGION
+              Value: !Ref 'AWS::Region'
+            - Name: S3_BUCKET_NAME
+              Value: !Ref S3BucketName
+            - Name: AMP_REMOTE_WRITE_URL
+              Value: !Ref AmpRemoteWriteUrl
+            - Name: ENVIRONMENT
+              Value: !Ref Environment
+          MountPoints:
+            - SourceVolume: tempo-data
+              ContainerPath: /var/tempo
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - 'wget --spider -q http://localhost:3200/ready || exit 1'
+            Interval: 30
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 60
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: tempo
+
+        - Name: postgres-exporter
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/obs-monitoring-postgres-exporter:latest'
+          Essential: false
+          Cpu: 64
+          Memory: 128
+          PortMappings:
+            - ContainerPort: 9187
+              Protocol: tcp
+          Secrets:
+            - Name: DATA_SOURCE_NAME
+              ValueFrom: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/ecs/obs-monitoring-postgres-exporter-0Qm5KN:DATA_SOURCE_NAME::'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: postgres-exporter
+
+        - Name: redis-exporter
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/obs-monitoring-redis-exporter:latest'
+          Essential: false
+          Cpu: 64
+          Memory: 128
+          PortMappings:
+            - ContainerPort: 9121
+              Protocol: tcp
+          Secrets:
+            - Name: REDIS_ADDR
+              ValueFrom: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/ecs/obs-monitoring-redis-exporter-L4P9lv:REDIS_ADDR::'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: redis-exporter
+
+        - Name: alloy
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/obs-monitoring-alloy:latest'
+          Essential: false
+          Cpu: 256
+          Memory: 512
+          Command:
+            - run
+            - /etc/alloy/config.alloy
+            - '--server.http.listen-addr=0.0.0.0:12345'
+            - '--stability.level=generally-available'
+          PortMappings:
+            - ContainerPort: 4317
+              Protocol: tcp
+            - ContainerPort: 4318
+              Protocol: tcp
+            - ContainerPort: 12345
+              Protocol: tcp
+          Environment:
+            - Name: AWS_REGION
+              Value: !Ref 'AWS::Region'
+            - Name: AMP_REMOTE_WRITE_URL
+              Value: !Ref AmpRemoteWriteUrl
+          DependsOn:
+            - ContainerName: loki
+              Condition: HEALTHY
+            - ContainerName: tempo
+              Condition: HEALTHY
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: alloy
+
+  MonitoringService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Sub 'obs-monitoring-${Environment}'
+      Cluster: !Ref ClusterName
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: 0
+      LaunchType: FARGATE
+      PlatformVersion: LATEST
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref SecurityGroupId
+          Subnets: !Ref PrivateSubnetIds
+      LoadBalancers:
+        - ContainerName: grafana
+          ContainerPort: 3000
+          TargetGroupArn: !Ref TargetGroupArn
+      ServiceRegistries:
+        - RegistryArn: !GetAtt DiscoveryService.Arn
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 0
+      EnableExecuteCommand: true
+
+Outputs:
+  ServiceName:
+    Value: !Sub 'obs-monitoring-${Environment}'
+    Export:
+      Name: !Sub '${AWS::StackName}-ServiceName'
+  ServiceArn:
+    Value: !Ref MonitoringService
+    Export:
+      Name: !Sub '${AWS::StackName}-ServiceArn'
+  TaskDefinitionArn:
+    Value: !Ref TaskDefinition
+    Export:
+      Name: !Sub '${AWS::StackName}-TaskDefinitionArn'

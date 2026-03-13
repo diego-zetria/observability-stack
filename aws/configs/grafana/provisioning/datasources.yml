@@ -1,0 +1,61 @@
+# Grafana Datasource Provisioning - AWS Production
+
+apiVersion: 1
+
+datasources:
+  # Prometheus (AWS Managed Prometheus)
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: ${AMP_QUERY_URL}
+    isDefault: true
+    uid: prometheus
+    jsonData:
+      timeInterval: "15s"
+      sigV4Auth: true
+      sigV4Region: ${AWS_REGION}
+      exemplarTraceIdDestinations:
+        - name: traceID
+          datasourceUid: tempo
+
+  # Loki (localhost - same task)
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://localhost:3100
+    uid: loki
+    jsonData:
+      derivedFields:
+        - name: TraceID
+          matcherRegex: '"trace_id":"(\w+)"'
+          url: "$${__value.raw}"
+          datasourceUid: tempo
+          matcherType: regex
+
+  # Tempo (localhost - same task)
+  - name: Tempo
+    type: tempo
+    access: proxy
+    url: http://localhost:3200
+    uid: tempo
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: loki
+        filterByTraceID: true
+        filterBySpanID: false
+        tags:
+          - key: service.name
+            value: compose_service
+      tracesToMetrics:
+        datasourceUid: prometheus
+        spanStartTimeShift: "-1h"
+        spanEndTimeShift: "1h"
+        tags:
+          - key: service.name
+            value: service
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true
+      lokiSearch:
+        datasourceUid: loki

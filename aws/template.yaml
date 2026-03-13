@@ -1,0 +1,125 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Observability Stack - Root Template'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID for the existing my-cluster cluster
+  PrivateSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Private subnet IDs (at least 2 AZs)
+  AlbListenerArn:
+    Type: String
+    Description: ARN of existing HTTPS (443) listener on ALB
+  AlbSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group of the existing ALB
+  BackendSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group of myapp-backend-dev
+  GrafanaAdminPassword:
+    Type: String
+    Default: admin
+    NoEcho: true
+  TemplatesBucket:
+    Type: String
+    Description: S3 bucket containing nested stack templates and Lambda code
+
+Resources:
+  AmpStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://${TemplatesBucket}.s3.amazonaws.com/stacks/amp.yaml'
+      Parameters:
+        Environment: !Ref Environment
+
+  NetworkingStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://${TemplatesBucket}.s3.amazonaws.com/stacks/networking.yaml'
+      Parameters:
+        Environment: !Ref Environment
+        VpcId: !Ref VpcId
+        AlbListenerArn: !Ref AlbListenerArn
+        AlbSecurityGroupId: !Ref AlbSecurityGroupId
+        BackendSecurityGroupId: !Ref BackendSecurityGroupId
+
+  StorageStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://${TemplatesBucket}.s3.amazonaws.com/stacks/storage.yaml'
+      Parameters:
+        Environment: !Ref Environment
+        VpcId: !Ref VpcId
+        PrivateSubnetIds: !Join [',', !Ref PrivateSubnetIds]
+        EcsSecurityGroupId: !GetAtt NetworkingStack.Outputs.MonitoringSecurityGroupId
+
+  IamStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - StorageStack
+      - AmpStack
+    Properties:
+      TemplateURL: !Sub 'https://${TemplatesBucket}.s3.amazonaws.com/stacks/iam.yaml'
+      Parameters:
+        Environment: !Ref Environment
+        MonitoringBucketArn: !GetAtt StorageStack.Outputs.BucketArn
+        AmpWorkspaceArn: !GetAtt AmpStack.Outputs.WorkspaceArn
+        EfsFileSystemArn: !Sub
+          - 'arn:aws:elasticfilesystem:${AWS::Region}:${AWS::AccountId}:file-system/${FsId}'
+          - FsId: !GetAtt StorageStack.Outputs.FileSystemId
+
+  EcsStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - IamStack
+      - StorageStack
+      - NetworkingStack
+      - AmpStack
+    Properties:
+      TemplateURL: !Sub 'https://${TemplatesBucket}.s3.amazonaws.com/stacks/ecs-service.yaml'
+      Parameters:
+        Environment: !Ref Environment
+        TaskExecutionRoleArn: !GetAtt IamStack.Outputs.TaskExecutionRoleArn
+        TaskRoleArn: !GetAtt IamStack.Outputs.TaskRoleArn
+        PrivateSubnetIds: !Join [',', !Ref PrivateSubnetIds]
+        SecurityGroupId: !GetAtt NetworkingStack.Outputs.MonitoringSecurityGroupId
+        EfsFileSystemId: !GetAtt StorageStack.Outputs.FileSystemId
+        GrafanaAccessPointId: !GetAtt StorageStack.Outputs.GrafanaAccessPointId
+        TempoAccessPointId: !GetAtt StorageStack.Outputs.TempoAccessPointId
+        TargetGroupArn: !GetAtt NetworkingStack.Outputs.TargetGroupArn
+        S3BucketName: !GetAtt StorageStack.Outputs.BucketName
+        AmpRemoteWriteUrl: !GetAtt AmpStack.Outputs.RemoteWriteUrl
+        AmpQueryUrl: !GetAtt AmpStack.Outputs.QueryUrl
+        GrafanaAdminPassword: !Ref GrafanaAdminPassword
+        VpcId: !Ref VpcId
+
+  ControlStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - IamStack
+      - EcsStack
+    Properties:
+      TemplateURL: !Sub 'https://${TemplatesBucket}.s3.amazonaws.com/stacks/control.yaml'
+      Parameters:
+        Environment: !Ref Environment
+        LambdaRoleArn: !GetAtt IamStack.Outputs.LambdaRoleArn
+        ServiceName: !GetAtt EcsStack.Outputs.ServiceName
+        LambdaCodeBucket: !Ref TemplatesBucket
+        LambdaCodeKey: lambda/monitoring-control.zip
+
+Outputs:
+  GrafanaUrl:
+    Value: 'https://monitoring.dev.example.com'
+  AmpWorkspaceId:
+    Value: !GetAtt AmpStack.Outputs.WorkspaceId
+  MonitoringBucket:
+    Value: !GetAtt StorageStack.Outputs.BucketName
+  ControlLambdaUrl:
+    Value: !GetAtt ControlStack.Outputs.FunctionUrl
+  ServiceName:
+    Value: !GetAtt EcsStack.Outputs.ServiceName

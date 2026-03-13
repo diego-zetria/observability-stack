@@ -1,0 +1,98 @@
+// Grafana Alloy Configuration - AWS Production
+// Pipeline:
+//   NestJS (OTLP) -> Alloy -> Tempo (localhost) + AMP (sigv4) + Loki (localhost)
+
+// OTLP Receiver
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces  = [otelcol.processor.batch.traces.input]
+    metrics = [otelcol.processor.batch.metrics.input]
+    logs    = [otelcol.processor.batch.logs.input]
+  }
+}
+
+// Batch Processors
+otelcol.processor.batch "traces" {
+  send_batch_size = 1024
+  timeout         = "5s"
+
+  output {
+    traces = [otelcol.exporter.otlphttp.tempo.input]
+  }
+}
+
+otelcol.processor.batch "metrics" {
+  send_batch_size = 1024
+  timeout         = "5s"
+
+  output {
+    metrics = [otelcol.exporter.prometheus.default.input]
+  }
+}
+
+otelcol.processor.batch "logs" {
+  send_batch_size = 1024
+  timeout         = "5s"
+
+  output {
+    logs = [otelcol.exporter.loki.default.input]
+  }
+}
+
+// Tempo Exporter - localhost (same task)
+otelcol.exporter.otlphttp "tempo" {
+  client {
+    endpoint = "http://localhost:14318"
+  }
+}
+
+// Prometheus Exporter - to AMP via SigV4
+otelcol.exporter.prometheus "default" {
+  forward_to = [prometheus.remote_write.default.receiver]
+}
+
+prometheus.remote_write "default" {
+  endpoint {
+    url = env("AMP_REMOTE_WRITE_URL")
+
+    sigv4 {
+      region = env("AWS_REGION")
+    }
+  }
+}
+
+// PostgreSQL Exporter Scrape - localhost sidecar
+prometheus.scrape "postgres_exporter" {
+  targets = [{
+    __address__ = "localhost:9187",
+  }]
+  scrape_interval = "30s"
+  forward_to      = [prometheus.remote_write.default.receiver]
+}
+
+// Redis Exporter Scrape - localhost sidecar
+prometheus.scrape "redis_exporter" {
+  targets = [{
+    __address__ = "localhost:9121",
+  }]
+  scrape_interval = "30s"
+  forward_to      = [prometheus.remote_write.default.receiver]
+}
+
+// Loki Exporter - localhost (same task)
+otelcol.exporter.loki "default" {
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://localhost:3100/loki/api/v1/push"
+  }
+}

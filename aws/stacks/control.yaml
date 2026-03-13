@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Observability - Lambda Control (start/stop/status)'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+  LambdaRoleArn:
+    Type: String
+  ClusterName:
+    Type: String
+    Default: my-cluster
+  ServiceName:
+    Type: String
+    Default: obs-monitoring-dev
+  LambdaCodeBucket:
+    Type: String
+  LambdaCodeKey:
+    Type: String
+    Default: lambda/monitoring-control.zip
+
+Resources:
+  ControlFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'obs-monitoring-control-${Environment}'
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !Ref LambdaRoleArn
+      Timeout: 30
+      MemorySize: 128
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          CLUSTER_NAME: !Ref ClusterName
+          SERVICE_NAME: !Ref ServiceName
+      Code:
+        S3Bucket: !Ref LambdaCodeBucket
+        S3Key: !Ref LambdaCodeKey
+
+  FunctionUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      AuthType: AWS_IAM
+      TargetFunctionArn: !Ref ControlFunction
+
+  FunctionUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ControlFunction
+      Action: lambda:InvokeFunctionUrl
+      Principal: '*'
+      FunctionUrlAuthType: AWS_IAM
+
+Outputs:
+  FunctionArn:
+    Value: !GetAtt ControlFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-FunctionArn'
+  FunctionUrl:
+    Value: !GetAtt FunctionUrl.FunctionUrl
+    Export:
+      Name: !Sub '${AWS::StackName}-FunctionUrl'

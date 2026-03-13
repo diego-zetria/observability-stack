@@ -1,0 +1,216 @@
+# =============================================================================
+# Observability Stack - Grafana LGTM + Netdata
+# =============================================================================
+# Stack completa de observabilidade self-hosted para desenvolvimento local.
+#
+# Uso:
+#   docker compose up -d
+#   docker compose down
+#
+# Acesso:
+#   - Grafana:    http://localhost:3100 (admin/admin)
+#   - Prometheus: http://localhost:9090
+#   - Netdata:    http://localhost:19999
+#   - Alloy UI:   http://localhost:12345
+#   - Loki:       http://localhost:3200
+#   - Tempo:      http://localhost:3201
+#
+# O backend NestJS envia OTLP para Alloy (:4317/:4318) que distribui:
+#   traces -> Tempo, metrics -> Prometheus, logs -> Loki
+# =============================================================================
+
+services:
+  # ==========================================================================
+  # Grafana - Dashboards, Alerting, Explore
+  # ==========================================================================
+  grafana:
+    image: grafana/grafana:12.4.0
+    container_name: obs-grafana
+    restart: unless-stopped
+    ports:
+      - "3333:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_USERS_DEFAULT_THEME=dark
+      - GF_EXPLORE_ENABLED=true
+      - GF_FEATURE_TOGGLES_ENABLE=traceQLStreaming metricsSummary
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ==========================================================================
+  # Prometheus - Metricas
+  # ==========================================================================
+  prometheus:
+    image: prom/prometheus:v3.9.1
+    container_name: obs-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-remote-write-receiver'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:9090/-/healthy || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ==========================================================================
+  # Loki - Logs
+  # ==========================================================================
+  loki:
+    image: grafana/loki:3.6.1
+    container_name: obs-loki
+    restart: unless-stopped
+    ports:
+      - "3200:3100"
+    command: -config.file=/etc/loki/config.yml
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3100/ready || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ==========================================================================
+  # Tempo - Traces
+  # ==========================================================================
+  tempo:
+    image: grafana/tempo:2.7.2
+    container_name: obs-tempo
+    restart: unless-stopped
+    ports:
+      - "3201:3200"    # Tempo API / query frontend
+    command: -config.file=/etc/tempo/config.yml
+    volumes:
+      - ./tempo/tempo-config.yml:/etc/tempo/config.yml:ro
+      - tempo-data:/var/tempo
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3200/ready || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ==========================================================================
+  # Grafana Alloy - Collector (OTLP receiver + log collector + scraper)
+  # ==========================================================================
+  alloy:
+    image: grafana/alloy:v1.9.1
+    container_name: obs-alloy
+    restart: unless-stopped
+    ports:
+      - "12345:12345"  # Alloy UI
+      - "4317:4317"    # OTLP gRPC receiver
+      - "4318:4318"    # OTLP HTTP receiver
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --stability.level=generally-available
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    networks:
+      - monitoring
+
+  # ==========================================================================
+  # Netdata - Host/Infra Metrics
+  # ==========================================================================
+  netdata:
+    image: netdata/netdata:stable
+    container_name: obs-netdata
+    restart: unless-stopped
+    ports:
+      - "19999:19999"
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - netdata-data:/var/lib/netdata
+    environment:
+      - NETDATA_CLAIM_TOKEN=
+      - NETDATA_CLAIM_URL=
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    networks:
+      - monitoring
+
+  # ==========================================================================
+  # PostgreSQL Exporter - DB Metrics for Prometheus
+  # ==========================================================================
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:latest
+    container_name: obs-postgres-exporter
+    restart: unless-stopped
+    environment:
+      - DATA_SOURCE_NAME=${DATABASE_URL:-postgresql://user:password@your-rds-host.region.rds.amazonaws.com:5432/mydb}
+    ports:
+      - "9187:9187"
+    networks:
+      - monitoring
+
+  # ==========================================================================
+  # Redis Exporter - Redis Metrics for Prometheus
+  # ==========================================================================
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: obs-redis-exporter
+    restart: unless-stopped
+    environment:
+      - REDIS_ADDR=${REDIS_ADDR:-host.docker.internal:6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    ports:
+      - "9121:9121"
+    networks:
+      - monitoring
+
+volumes:
+  grafana-data:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+  netdata-data:
+
+networks:
+  monitoring:
+    driver: bridge

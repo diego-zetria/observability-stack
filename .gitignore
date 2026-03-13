@@ -1,0 +1,20 @@
+# Environment variables (contains credentials)
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Lambda build artifacts
+lambda/**/*.zip

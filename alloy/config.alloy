@@ -1,0 +1,167 @@
+// =============================================================================
+// Grafana Alloy Configuration - Observability
+// =============================================================================
+// Pipeline:
+//   NestJS (OTLP) -> Alloy -> Tempo (traces) + Prometheus (metrics) + Loki (logs)
+//   Docker containers -> Alloy -> Loki (logs)
+//
+// Ref: https://grafana.com/docs/alloy/latest/collect/opentelemetry-data/
+// Ref: https://grafana.com/docs/alloy/latest/reference/components/loki/loki.source.docker/
+
+// ---------------------------------------------------------------------------
+// OTLP Receiver - receives traces + metrics + logs from NestJS backend
+// Listens on :4317 (gRPC) and :4318 (HTTP)
+// ---------------------------------------------------------------------------
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces  = [otelcol.processor.batch.traces.input]
+    metrics = [otelcol.processor.batch.metrics.input]
+    logs    = [otelcol.processor.batch.logs.input]
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Batch Processors - separate pipelines for traces, metrics, and logs
+// ---------------------------------------------------------------------------
+otelcol.processor.batch "traces" {
+  send_batch_size = 1024
+  timeout         = "5s"
+
+  output {
+    traces = [otelcol.exporter.otlphttp.tempo.input]
+  }
+}
+
+otelcol.processor.batch "metrics" {
+  send_batch_size = 1024
+  timeout         = "5s"
+
+  output {
+    metrics = [otelcol.exporter.prometheus.default.input]
+  }
+}
+
+otelcol.processor.batch "logs" {
+  send_batch_size = 1024
+  timeout         = "5s"
+
+  output {
+    logs = [otelcol.exporter.loki.default.input]
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tempo Exporter - sends traces to Tempo via OTLP HTTP
+// ---------------------------------------------------------------------------
+otelcol.exporter.otlphttp "tempo" {
+  client {
+    endpoint = "http://tempo:4318"
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Prometheus Exporter - converts OTLP metrics to Prometheus format
+// Ref: https://grafana.com/docs/alloy/latest/reference/components/otelcol/otelcol.exporter.prometheus/
+// ---------------------------------------------------------------------------
+otelcol.exporter.prometheus "default" {
+  forward_to = [prometheus.remote_write.default.receiver]
+}
+
+// ---------------------------------------------------------------------------
+// Prometheus Remote Write - pushes metrics to Prometheus
+// Ref: https://grafana.com/docs/alloy/latest/collect/opentelemetry-to-lgtm-stack/
+// ---------------------------------------------------------------------------
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Loki Exporter - converts OTLP logs to Loki format
+// ---------------------------------------------------------------------------
+otelcol.exporter.loki "default" {
+  forward_to = [loki.write.default.receiver]
+}
+
+// ---------------------------------------------------------------------------
+// Docker Log Discovery - discovers all running containers
+// ---------------------------------------------------------------------------
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+// ---------------------------------------------------------------------------
+// Relabeling - extract useful labels from Docker metadata
+// ---------------------------------------------------------------------------
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  // Extract container name, strip leading slash
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "^/(.*)"
+    replacement   = "$1"
+    target_label  = "container"
+  }
+
+  // Use container name as service_name (Loki service discovery)
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "^/(.*)"
+    replacement   = "$1"
+    target_label  = "service_name"
+  }
+
+  // Extract compose service name
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "compose_service"
+  }
+
+  // Extract log stream (stdout/stderr)
+  rule {
+    source_labels = ["__meta_docker_container_log_stream"]
+    target_label  = "stream"
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Docker Log Source - scrapes logs from all discovered containers
+// ---------------------------------------------------------------------------
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.containers.output
+  forward_to = [loki.process.docker.receiver]
+}
+
+// ---------------------------------------------------------------------------
+// Log Processing - parse Docker log format and add labels
+// ---------------------------------------------------------------------------
+loki.process "docker" {
+  forward_to = [loki.write.default.receiver]
+
+  stage.docker {}
+
+  stage.static_labels {
+    values = {
+      source = "docker",
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Loki Writer - sends all logs to Loki
+// ---------------------------------------------------------------------------
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

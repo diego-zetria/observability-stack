@@ -1,0 +1,72 @@
+# Tempo Configuration - AWS Production
+# S3 backend for traces, AMP for metrics generator
+
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9095
+  log_level: warn
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "0.0.0.0:14317"
+        http:
+          endpoint: "0.0.0.0:14318"
+
+ingester:
+  trace_idle_period: 30s
+  max_block_bytes: 1073741824
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    block_retention: 168h
+
+storage:
+  trace:
+    backend: s3
+    s3:
+      bucket: ${S3_BUCKET_NAME}
+      prefix: tempo/
+      endpoint: s3.dualstack.${AWS_REGION}.amazonaws.com
+      region: ${AWS_REGION}
+    wal:
+      path: /var/tempo/wal
+    block:
+      bloom_filter_false_positive: 0.01
+
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+      service: myapp
+      environment: ${ENVIRONMENT}
+  storage:
+    path: /var/tempo/generator/wal
+    remote_write:
+      - url: ${AMP_REMOTE_WRITE_URL}
+        sigv4:
+          region: ${AWS_REGION}
+        send_exemplars: true
+  traces_storage:
+    path: /var/tempo/generator/traces
+  processor:
+    span_metrics:
+      dimensions:
+        - http.method
+        - http.route
+        - http.status_code
+        - service.name
+    service_graphs:
+      dimensions:
+        - http.method
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors:
+        - service-graphs
+        - span-metrics
+        - local-blocks

@@ -1,0 +1,138 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Observability - Storage (S3 + EFS)'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PrivateSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+  EcsSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+
+Resources:
+  MonitoringBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Sub 'obs-monitoring-${Environment}-${AWS::AccountId}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: LokiRetention
+            Prefix: fake/
+            Status: Enabled
+            ExpirationInDays: 30
+          - Id: TempoRetention
+            Prefix: tempo/
+            Status: Enabled
+            ExpirationInDays: 7
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Project
+          Value: obs-monitoring
+
+  MonitoringFileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted: true
+      PerformanceMode: generalPurpose
+      ThroughputMode: bursting
+      LifecyclePolicies:
+        - TransitionToIA: AFTER_30_DAYS
+      FileSystemTags:
+        - Key: Name
+          Value: !Sub 'obs-monitoring-${Environment}'
+
+  EfsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: EFS access for monitoring stack
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          SourceSecurityGroupId: !Ref EcsSecurityGroupId
+      Tags:
+        - Key: Name
+          Value: !Sub 'obs-monitoring-efs-${Environment}'
+
+  MountTargetA:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref MonitoringFileSystem
+      SubnetId: !Select [0, !Ref PrivateSubnetIds]
+      SecurityGroups:
+        - !Ref EfsSecurityGroup
+
+  MountTargetB:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref MonitoringFileSystem
+      SubnetId: !Select [1, !Ref PrivateSubnetIds]
+      SecurityGroups:
+        - !Ref EfsSecurityGroup
+
+  GrafanaAccessPoint:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref MonitoringFileSystem
+      PosixUser:
+        Uid: '472'
+        Gid: '0'
+      RootDirectory:
+        Path: /grafana
+        CreationInfo:
+          OwnerUid: '472'
+          OwnerGid: '0'
+          Permissions: '755'
+
+  TempoAccessPoint:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      FileSystemId: !Ref MonitoringFileSystem
+      PosixUser:
+        Uid: '10001'
+        Gid: '10001'
+      RootDirectory:
+        Path: /tempo
+        CreationInfo:
+          OwnerUid: '10001'
+          OwnerGid: '10001'
+          Permissions: '755'
+
+Outputs:
+  BucketName:
+    Value: !Ref MonitoringBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-BucketName'
+  BucketArn:
+    Value: !GetAtt MonitoringBucket.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-BucketArn'
+  FileSystemId:
+    Value: !Ref MonitoringFileSystem
+    Export:
+      Name: !Sub '${AWS::StackName}-FileSystemId'
+  GrafanaAccessPointId:
+    Value: !Ref GrafanaAccessPoint
+    Export:
+      Name: !Sub '${AWS::StackName}-GrafanaAccessPointId'
+  TempoAccessPointId:
+    Value: !Ref TempoAccessPoint
+    Export:
+      Name: !Sub '${AWS::StackName}-TempoAccessPointId'
+  EfsSecurityGroupId:
+    Value: !Ref EfsSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-EfsSecurityGroupId'
