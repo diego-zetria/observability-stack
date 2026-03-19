@@ -6,29 +6,41 @@ Features **9 pre-built Grafana dashboards**, **11 Prometheus alert rules**, **Op
 
 ## Architecture
 
-```
-                    NestJS Backend
-                         |
-                    OTLP (gRPC/HTTP)
-                         |
-                     ┌───▼───┐
-                     │ Alloy │  (OpenTelemetry Collector)
-                     └┬──┬──┬┘
-                      │  │  │
-           ┌──────────┘  │  └──────────┐
-           ▼             ▼             ▼
-      ┌─────────┐  ┌──────────┐  ┌──────────┐
-      │  Tempo  │  │Prometheus│  │   Loki   │
-      │ Traces  │  │ Metrics  │  │   Logs   │
-      └────┬────┘  └────┬─────┘  └────┬─────┘
-           │             │             │
-           │     ┌───────┘             │
-           │     │   ┌─────────────────┘
-           ▼     ▼   ▼
-        ┌─────────────┐    ┌──────────────────┐
-        │   Grafana   │    │     Exporters     │
-        │  Dashboards │    │  postgres + redis  │
-        └─────────────┘    └──────────────────┘
+```mermaid
+graph TB
+    subgraph Application
+        APP[NestJS Backend]
+    end
+
+    subgraph "Grafana Alloy (OTel Collector)"
+        ALLOY[Alloy]
+    end
+
+    subgraph Storage
+        TEMPO[Tempo<br/>Traces]
+        PROM[Prometheus<br/>Metrics]
+        LOKI[Loki<br/>Logs]
+    end
+
+    subgraph Exporters
+        PG_EXP[postgres-exporter]
+        REDIS_EXP[redis-exporter]
+    end
+
+    subgraph Visualization
+        GRAFANA[Grafana<br/>9 Dashboards + 11 Alert Rules]
+    end
+
+    APP -->|OTLP gRPC/HTTP| ALLOY
+    ALLOY -->|Traces| TEMPO
+    ALLOY -->|Remote Write| PROM
+    ALLOY -->|Log Pipelines| LOKI
+    TEMPO -->|Span Metrics| PROM
+    PG_EXP -->|Scrape| PROM
+    REDIS_EXP -->|Scrape| PROM
+    TEMPO --> GRAFANA
+    PROM --> GRAFANA
+    LOKI --> GRAFANA
 ```
 
 **Data pipeline:**
