@@ -1,3 +1,8 @@
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Grafana](https://img.shields.io/badge/Grafana-12.4.0-orange?logo=grafana)
+![Prometheus](https://img.shields.io/badge/Prometheus-3.9.1-red?logo=prometheus)
+![AWS](https://img.shields.io/badge/AWS-ECS_Fargate-FF9900?logo=amazonwebservices)
+
 # Observability Stack
 
 Production-ready observability platform built on the **Grafana LGTM stack** (Loki, Grafana, Tempo, Prometheus) with both local Docker Compose development and **AWS ECS Fargate** deployment via CloudFormation.
