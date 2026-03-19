@@ -176,6 +176,18 @@ Pre-configured Prometheus alert rules in `prometheus/alert-rules.yml`:
 | RedisDown | Redis unreachable for 1min | critical |
 | RedisHighMemory | Redis memory > 80% for 5min | warning |
 
+## Engineering Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| **Grafana LGTM over ELK/Datadog** | Fully open-source stack with no per-host licensing. LGTM provides unified metrics, logs, and traces under a single query ecosystem (LogQL, PromQL, TraceQL) with native correlation between signals |
+| **Alloy over standalone OTel Collector** | Grafana Alloy is a distribution of the OTel Collector with native Prometheus scraping, Loki log pipelines, and Grafana Cloud integration — reducing operational overhead from managing separate collectors |
+| **ECS Fargate over EKS for monitoring** | The observability stack itself doesn't need Kubernetes orchestration. Fargate eliminates node management overhead and keeps the monitoring plane independent from the application cluster |
+| **CloudFormation over Terraform for this stack** | Intentional separation of concerns — application infrastructure uses Terraform/Terragrunt (see [aws-platform](https://github.com/diego-zetria/aws-platform)), while the monitoring stack uses CloudFormation to avoid circular dependencies in state management |
+| **Span metrics in Tempo** | Generates RED metrics (rate, errors, duration) directly from traces, eliminating the need for manual metric instrumentation on every service endpoint |
+| **Cost-control Lambda** | Non-production monitoring environments can be stopped via Lambda to reduce Fargate costs to ~$1.55/mo (EFS storage only), enabling budget-friendly dev workflows |
+| **27 custom business metrics** | Domain-specific metrics (orders, payments, delivery, inventory) provide business observability beyond pure infrastructure monitoring — bridging the gap between SRE and product teams |
+
 ## Project Structure
 
 ```
